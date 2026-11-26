@@ -16,6 +16,6 @@ public interface ITrainingRegisterDataAccess
     Task<List<UserAdd.Group>> GetGroupAsync();
     Task<List<string>> GetGroupUsersAsync(string groupId);
     Task<List<TrainingUserTraining>> GetTrainingRegisterUserDataAsync();
-    Task<bool> SaveNewTrainingAsync(NewTrainingRegister trainingRegister, List<UserAddVM> trainees, List<string> fileNames, string uploadedBy, string uploadedByMail);
+    Task<(bool Success, long? TrainingId)> SaveNewTrainingAsync(NewTrainingRegister trainingRegister, List<UserAddVM> trainees, List<string> fileNames, string uploadedBy, string uploadedByMail);
     Task<string> UploadTrainingFile(byte[] fileContent, string fileName, string authToken);
 }

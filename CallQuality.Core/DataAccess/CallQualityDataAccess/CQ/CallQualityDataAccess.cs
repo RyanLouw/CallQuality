@@ -457,6 +457,81 @@ public async Task<List<AssessmentType>> GetAssessmentTypesAsync()
  
     }
 
+    public async Task<List<RequiredTrainingAssessment>> GetRequiredTrainingAssessmentsAsync(
+        DateTime from, DateTime to, string[]? operatorIds)
+    {
+        var assessments = _context.Assessments.AsNoTracking()
+            .Where(assessment => assessment.AssessedOn >= from && assessment.AssessedOn < to &&
+                assessment.OperatorId != null && assessment.OperatorId != "" &&
+                !_context.AssessmentTrainingLinks.Any(link =>
+                    link.AssessmentId == assessment.AssessmentId && link.TrainingId != null));
+
+        if (operatorIds is not null)
+        {
+            assessments = assessments.Where(assessment =>
+                operatorIds.Contains(assessment.OperatorId!.Trim().ToLower()));
+        }
+
+        var rows = await assessments.Select(assessment => new
+        {
+            assessment.AssessmentId,
+            OperatorId = assessment.OperatorId!,
+            Answers = assessment.AssessmentDetails.Where(detail => !detail.IsNa)
+                .Select(detail => new
+                {
+                    Answer = assessment.IsReassessed == true
+                        ? detail.ReassessorAnswer ?? detail.AssessorAnswer
+                        : detail.AssessorAnswer,
+                    detail.Score,
+                    Question = detail.Question == null ? null : detail.Question.QuestionValue
+                }).ToList()
+        }).ToListAsync();
+
+        return rows.Where(row => row.Answers.Any(answer => answer.Answer == false))
+            .Select(row =>
+            {
+                var possiblePoints = row.Answers.Where(answer => answer.Answer.HasValue)
+                    .Sum(answer => answer.Score ?? 0);
+                var earnedPoints = row.Answers.Where(answer => answer.Answer == true)
+                    .Sum(answer => answer.Score ?? 0);
+
+                return new RequiredTrainingAssessment
+                {
+                    AssessmentId = row.AssessmentId,
+                    OperatorId = row.OperatorId.Trim(),
+                    Percentage = possiblePoints > 0 ? 100d * earnedPoints / possiblePoints : 0,
+                    MissedQuestions = row.Answers.Where(answer => answer.Answer == false)
+                        .Select(answer => answer.Question ?? "Question unavailable").ToList()
+                };
+            }).ToList();
+    }
+
+    public async Task<bool> TryReserveAssessmentTrainingAsync(IReadOnlyCollection<AssessmentTrainingLink> links)
+    {
+        _context.AssessmentTrainingLinks.AddRange(links);
+        try
+        {
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
+        {
+            foreach (var link in links)
+            {
+                _context.Entry(link).State = EntityState.Detached;
+            }
+
+            return false;
+        }
+    }
+
+    public Task<int> CompleteAssessmentTrainingAsync(Guid submissionId, long trainingId)
+    {
+        return _context.AssessmentTrainingLinks
+            .Where(link => link.SubmissionId == submissionId && link.TrainingId == null)
+            .ExecuteUpdateAsync(update => update.SetProperty(link => link.TrainingId, (long?)trainingId));
+    }
+
     public async Task<List<TrainingRegister>> GetOperatorQuestionsMissedReportAsync(
     DateTime startDate,
     DateTime? endDate = null)

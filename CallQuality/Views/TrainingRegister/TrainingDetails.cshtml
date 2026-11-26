@@ -32,6 +32,12 @@
                   method="post"
                   enctype="multipart/form-data"
                   id="trainingForm">
+                <input asp-for="NewTraining.RequiredTrainingUserId" type="hidden" />
+                @foreach (var assessmentId in Model.NewTraining.RequiredAssessmentIds)
+                {
+                    <input type="hidden" name="NewTraining.RequiredAssessmentIds" value="@assessmentId" />
+                }
+
 
                 @Html.AntiForgeryToken()
 

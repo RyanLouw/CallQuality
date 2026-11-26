@@ -20,6 +20,8 @@ public partial class CallQualityDbContext : DbContext
 
     public virtual DbSet<Assessment> Assessments { get; set; }
 
+    public DbSet<AssessmentTrainingLink> AssessmentTrainingLinks { get; set; }
+
     public virtual DbSet<Assessor> Assessors { get; set; }
 
     public virtual DbSet<CallDetail> CallDetails { get; set; }
@@ -88,6 +90,13 @@ public partial class CallQualityDbContext : DbContext
 
             entity.Property(e => e.TypeName)
                 .HasMaxLength(150);
+        });
+
+        modelBuilder.Entity<AssessmentTrainingLink>(entity =>
+        {
+            entity.ToTable("AssessmentTrainingLink", "dbo");
+            entity.HasKey(link => link.AssessmentId);
+            entity.Property(link => link.AssessmentId).ValueGeneratedNever();
         });
 
         modelBuilder.Entity<Assessment>(entity =>

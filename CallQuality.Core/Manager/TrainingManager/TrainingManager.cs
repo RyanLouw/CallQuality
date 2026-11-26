@@ -1,6 +1,7 @@
 ﻿using CallQuality.Core.DataAccess.CallQualityDataAccess.CQ;
 using CallQuality.Core.DataAccess.TrainingRegisterDataAccess;
 using CallQuality.Core.Helpers;
+using CallQuality.Core.DataAccess.Context.Entities;
 using CallQuality.Core.Manager.AssessmentsManager.Models;
 using CallQuality.Core.Manager.ExportManager;
 using CallQuality.Core.Manager.TrainingManager.Models;
@@ -34,10 +35,6 @@ public class TrainingManager : ITrainingManager
     public async Task<TrainingVM> GetTrainingRegisterDataAsync()
     {
         var total = Stopwatch.StartNew();
-
-        var now = DateTime.Now;
-        var startDate = new DateTime(now.Year, now.Month, 1);
-        var endDate = startDate.AddMonths(1);
 
         var sw = Stopwatch.StartNew();
         var userEntities = await _tc.GetTrainingRegisterUserDataAsync();
@@ -92,45 +89,7 @@ public class TrainingManager : ITrainingManager
             sw.ElapsedMilliseconds,
             operators.Count);
 
-        sw.Restart();
-        var suggestedTrainingEntities = await _db.GetOperatorQuestionsMissedReportAsync(
-            startDate,
-            endDate);
-
-        Log.Information(
-            "GetOperatorQuestionsMissedReportAsync took {ElapsedMs}ms. Retrieved {Count} rows for {StartDate:yyyy-MM-dd} to {EndDate:yyyy-MM-dd}",
-            sw.ElapsedMilliseconds,
-            suggestedTrainingEntities.Count(),
-            startDate,
-            endDate);
-
-        sw.Restart();
-        var suggestedTrainings = suggestedTrainingEntities
-            .GroupBy(x => new
-            {
-                x.ID_GUID,
-                x.AgentName,
-                x.Extension,
-                x.Department,
-                x.AverageScore
-            })
-            .Select(group =>
-            {
-                var vm = new TrainingRegisterSuggestedGroupedVM(group.First());
-
-                vm.MissedQuestions = group
-                    .Where(x => !string.IsNullOrWhiteSpace(x.QuestionValue))
-                    .Select(x => new MissedQuestion(x))
-                    .ToList();
-
-                return vm;
-            })
-            .ToList();
-
-        Log.Information(
-            "Grouping SuggestedTrainings took {ElapsedMs}ms. Created {Count} suggested training records",
-            sw.ElapsedMilliseconds,
-            suggestedTrainings.Count);
+        var requiredTrainings = await GetRequiredTrainingsAsync();
 
         Log.Information(
             "GetTrainingRegisterDataAsync completed in {ElapsedMs}ms",
@@ -144,23 +103,13 @@ public class TrainingManager : ITrainingManager
             UserTrainings = users,
             ExistingRegisters = existingRegisters,
             OperatorAssignments = operators,
-            SuggestedTrainings = suggestedTrainings
+            RequiredTrainings = requiredTrainings
         };
     }
 
-    public async Task<TrainingDetailsPageVM> GetTrainingDetailsAsync(Guid? userId)
+    public async Task<TrainingDetailsPageVM?> GetTrainingDetailsAsync(Guid? userId)
     {
         var total = Stopwatch.StartNew();
-
-        var now = DateTime.Now;
-        var startDate = new DateTime(now.Year, now.Month, 1);
-        var endDate = startDate.AddMonths(1).AddDays(-1);
-
-        Log.Information(
-            "GetTrainingDetailsAsync started. UserId: {UserId}, Date range: {StartDate:yyyy-MM-dd} to {EndDate:yyyy-MM-dd}",
-            userId,
-            startDate,
-            endDate);
 
         var sw = Stopwatch.StartNew();
 
@@ -229,108 +178,22 @@ public class TrainingManager : ITrainingManager
             "Initial NewTrainingRegisterVM setup took {ElapsedMs}ms",
             sw.ElapsedMilliseconds);
 
-        if (userId != null)
+        if (userId is Guid traineeId)
         {
-            Log.Information(
-                "Loading suggested training data for selected user {UserId}",
-                userId.Value);
-
-            sw.Restart();
-            var suggestedTrainingEntities = await _db.GetOperatorQuestionsMissedReportAsync(
-                startDate,
-                endDate);
-
-            Log.Information(
-                "GetOperatorQuestionsMissedReportAsync took {ElapsedMs}ms. Retrieved {Count} rows",
-                sw.ElapsedMilliseconds,
-                suggestedTrainingEntities.Count());
-
-            sw.Restart();
-            var suggestedTrainings = suggestedTrainingEntities
-                .GroupBy(x => new
-                {
-                    x.ID_GUID,
-                    x.AgentName,
-                    x.Extension,
-                    x.Department,
-                    x.AverageScore
-                })
-                .Select(group =>
-                {
-                    var vm = new TrainingRegisterSuggestedGroupedVM(group.First());
-
-                    vm.MissedQuestions = group
-                        .Where(x => !string.IsNullOrWhiteSpace(x.QuestionValue))
-                        .Select(x => new MissedQuestion(x))
-                        .ToList();
-
-                    return vm;
-                })
-                .ToList();
-
-            Log.Information(
-                "Grouping suggested training rows took {ElapsedMs}ms. Created {Count} suggested training records",
-                sw.ElapsedMilliseconds,
-                suggestedTrainings.Count);
-
-            sw.Restart();
-            var userSuggested = suggestedTrainings
-                .FirstOrDefault(x => x.ID_GUID == userId.Value);
-
-            Log.Information(
-                "Finding suggested training for user {UserId} took {ElapsedMs}ms. Found: {Found}",
-                userId.Value,
-                sw.ElapsedMilliseconds,
-                userSuggested != null);
-
-            if (userSuggested != null)
+            var requiredTraining = (await GetRequiredTrainingsAsync(traineeId)).SingleOrDefault();
+            if (requiredTraining is null)
             {
-                sw.Restart();
-
-                var description = string.Join(Environment.NewLine,
-                    userSuggested.MissedQuestions.Select(q =>
-                        $"• {q.QuestionValue} (Missed {q.MissedCount} time{(q.MissedCount == 1 ? "" : "s")})"));
-
-                newTrainingRegisterView.TrainingDescription = description;
-                newTrainingRegisterView.SelectedTraineeIds = new List<string>
-            {
-                userSuggested.ID_GUID.ToString()
-            };
-
-                Log.Information(
-                    "Applied suggested training for user {UserId}. Missed question count: {MissedQuestionCount}. Took {ElapsedMs}ms",
-                    userId.Value,
-                    userSuggested.MissedQuestions.Count,
-                    sw.ElapsedMilliseconds);
-            }
-            else
-            {
-                Log.Information(
-                    "No suggested training was found for selected user {UserId}",
-                    userId.Value);
+                return null;
             }
 
+            newTrainingRegisterView.RequiredTrainingUserId = traineeId;
+            newTrainingRegisterView.RequiredAssessmentIds = requiredTraining.AssessmentIds;
+            newTrainingRegisterView.SelectedTraineeIds = [traineeId.ToString()];
             newTrainingRegisterView.TrainingTopic = "Call Quality Counselling";
-
-            var firstDuration = durations.FirstOrDefault();
-
-            if (firstDuration != null)
-            {
-                newTrainingRegisterView.TimeDuration = firstDuration.DurationValue;
-
-                Log.Information(
-                    "Default training duration set to {DurationValue}",
-                    firstDuration.DurationValue);
-            }
-            else
-            {
-                Log.Warning("No duration options were available to set a default duration");
-            }
-        }
-        else
-        {
-            Log.Information(
-                "No UserId was supplied; skipping suggested training lookup");
+            newTrainingRegisterView.TimeDuration = durations.FirstOrDefault()?.DurationValue ?? 0;
+            newTrainingRegisterView.TrainingDescription = string.Join(Environment.NewLine,
+                requiredTraining.MissedQuestions.Select(question =>
+                    $"• {question.QuestionValue} (Missed {question.MissedCount} time{(question.MissedCount == 1 ? "" : "s")})"));
         }
 
         Log.Information(
@@ -456,31 +319,190 @@ public class TrainingManager : ITrainingManager
     }
 
 
-    public async Task<bool> SaveTrainingRegisterAsync(TrainingDetailsPageVM model, IFormFileCollection? files)
+    private async Task<List<RequiredTrainingGroupVM>> GetRequiredTrainingsAsync(Guid? traineeId = null)
     {
-        List<string> uploadedFileUrls = new List<string>();
-        if (files != null)
-        {  
-            uploadedFileUrls = await UploadFilesAsync(files); 
+        var currentUserId = _ua.GetCurrentUserId();
+        if (currentUserId is null)
+        {
+            return [];
         }
-        var userid = _ua.GetCurrentUserId();
+
+        var roles = await _ua.GetUserRolesAsync();
+        var canViewAll = roles.Contains("Manager") || roles.Contains("Reassessor");
+        if (!canViewAll && !roles.Contains("Assessor"))
+        {
+            return [];
+        }
+
+        var users = (await _db.GetAllUsersAsync())
+            .Select(user => new
+            {
+                User = user,
+                Id = user.ID_Guid ?? (Guid.TryParse(user.ID, out var id) ? id : Guid.Empty)
+            })
+            .Where(item => item.Id != Guid.Empty)
+            .DistinctBy(item => item.Id)
+            .ToDictionary(item => item.Id, item => item.User);
+
+        var now = DateTime.Now;
+        var today = now.Date;
+        var monthStart = new DateTime(now.Year, now.Month, 1);
+        string[]? operatorIds = traineeId is Guid selectedId ? [selectedId.ToString()] : null;
+        if (!canViewAll)
+        {
+            var assessorName = _ua.GetUserName().Trim();
+            var assessorEmail = _ua.GetCurrentUserEmail()?.Trim();
+            var canMatchByName = users.TryGetValue(currentUserId.Value, out var assessorUser) &&
+                string.Equals(assessorUser.DisplayName?.Trim(), assessorName, StringComparison.OrdinalIgnoreCase) &&
+                users.Values.Count(user => string.Equals(user.DisplayName?.Trim(), assessorName,
+                    StringComparison.OrdinalIgnoreCase)) == 1;
+            var assessorIds = (await _db.GetAllAssessorsAsync())
+                .Where(assessor =>
+                    string.Equals(assessor.AssessorName?.Trim(), currentUserId.Value.ToString(),
+                        StringComparison.OrdinalIgnoreCase) ||
+                    (!string.IsNullOrWhiteSpace(assessorEmail) &&
+                        string.Equals(assessor.AssessorName?.Trim(), assessorEmail, StringComparison.OrdinalIgnoreCase)) ||
+                    (canMatchByName &&
+                        string.Equals(assessor.AssessorName?.Trim(), assessorName, StringComparison.OrdinalIgnoreCase)))
+                .Select(assessor => assessor.AssessorId)
+                .Take(2)
+                .ToList();
+
+            if (assessorIds.Count != 1)
+            {
+                return [];
+            }
+
+            var assessorId = assessorIds[0];
+            var assignments = await _db.GetOperatorAssignmentsAsync();
+            operatorIds = assignments
+                .Where(assignment => assignment.AssessorId == assessorId ||
+                    (assignment.AssessorIdSecondary == assessorId &&
+                     assignment.SecondaryStartDate < today.AddDays(1) &&
+                     assignment.SecondaryEndDate >= today))
+                .Select(assignment => Guid.TryParse(assignment.OperatorId, out var id) ? id : Guid.Empty)
+                .Where(id => id != Guid.Empty && (traineeId is null || id == traineeId))
+                .Distinct()
+                .Select(id => id.ToString())
+                .ToArray();
+
+            if (operatorIds.Length == 0)
+            {
+                return [];
+            }
+        }
+
+        var assessments = await _db.GetRequiredTrainingAssessmentsAsync(
+            monthStart, monthStart.AddMonths(1), operatorIds);
+        if (assessments.Count == 0)
+        {
+            return [];
+        }
+
+        return assessments
+            .GroupBy(assessment => Guid.TryParse(assessment.OperatorId, out var id) ? id : Guid.Empty)
+            .Where(group => users.ContainsKey(group.Key))
+            .Select(group =>
+            {
+                var user = users[group.Key];
+                return new RequiredTrainingGroupVM
+                {
+                    ID_GUID = group.Key,
+                    AgentName = user.DisplayName ?? string.Empty,
+                    Department = user.Department ?? string.Empty,
+                    Extension = user.Extension ?? string.Empty,
+                    AverageScore = group.Average(assessment => assessment.Percentage),
+                    AssessmentIds = group.Select(assessment => assessment.AssessmentId).Order().ToList(),
+                    MissedQuestions = group.SelectMany(assessment => assessment.MissedQuestions)
+                        .GroupBy(question => question, StringComparer.OrdinalIgnoreCase)
+                        .Select(questions => new MissedQuestion
+                        {
+                            QuestionValue = questions.Key,
+                            MissedCount = questions.Count()
+                        })
+                        .OrderBy(question => question.QuestionValue)
+                        .ToList()
+                };
+            }).OrderBy(group => group.AgentName).ToList();
+    }
+
+    public async Task<string?> SaveTrainingRegisterAsync(TrainingDetailsPageVM model, IFormFileCollection? files)
+    {
+        var trainees = model.NewTraining.SelectedTraineeIds;
+        var requiredUserId = model.NewTraining.RequiredTrainingUserId;
+        var submittedAssessmentIds = model.NewTraining.RequiredAssessmentIds;
         var users = await GetFacilitatorDropdown();
+        var selectedUsers = users.Where(user => trainees.Contains(user.UserId, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+        if (selectedUsers.Count == 0)
+        {
+            return "Select at least one valid trainee.";
+        }
+
+        var dto = MapToDTO(model, users);
         var username = _ua.GetUserName();
         var email = _ua.GetCurrentUserEmail();
+        if (requiredUserId is null)
+        {
+            if (submittedAssessmentIds.Count != 0)
+            {
+                return "The required training selection is invalid.";
+            }
 
-        var trainees = model.NewTraining.SelectedTraineeIds;
-        var selectedUsers = users
-            .Where(u => trainees.Contains(u.UserId))
-            .ToList();
-        var dto = MapToDTO(model, users);
-        var result = await _tc.SaveNewTrainingAsync(
-            dto,
-            selectedUsers,
-            uploadedFileUrls,
-            uploadedBy: username,
-            uploadedByMail: email
-        );
-        return result;
+            var attachmentUrls = files is null ? [] : await UploadFilesAsync(files);
+            var manualResult = await _tc.SaveNewTrainingAsync(dto, selectedUsers, attachmentUrls, username, email);
+            return manualResult.Success ? null : "The Training Register could not be saved.";
+        }
+
+        if (_ua.GetCurrentUserId() is not Guid trainerId || selectedUsers.Count != 1 ||
+            !Guid.TryParse(selectedUsers[0].UserId, out var selectedId) || selectedId != requiredUserId ||
+            trainees.Count != 1)
+        {
+            return "Save required training for the selected agent only.";
+        }
+
+        var required = (await GetRequiredTrainingsAsync(selectedId)).SingleOrDefault();
+        if (required is null || !required.AssessmentIds.SequenceEqual(submittedAssessmentIds.Order()))
+        {
+            return "The required assessments or your access have changed. Reopen the agent’s training from Required Training.";
+        }
+
+        var uploadedFileUrls = files is null ? [] : await UploadFilesAsync(files);
+        var submissionId = Guid.NewGuid();
+        var trainedAt = DateTime.UtcNow;
+        var links = required.AssessmentIds.Select(id => new AssessmentTrainingLink
+        {
+            AssessmentId = id,
+            SubmissionId = submissionId,
+            TrainedByUserId = trainerId,
+            TrainedAtUtc = trainedAt
+        }).ToList();
+
+        if (!await _db.TryReserveAssessmentTrainingAsync(links))
+        {
+            return "Training has already been submitted or is awaiting confirmation for these assessments.";
+        }
+
+        long? trainingId = null;
+        try
+        {
+            var result = await _tc.SaveNewTrainingAsync(dto, selectedUsers, uploadedFileUrls, username, email);
+            trainingId = result.TrainingId;
+            if (result.Success && trainingId is long id &&
+                await _db.CompleteAssessmentTrainingAsync(submissionId, id) == links.Count)
+            {
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Training confirmation failed for submission {SubmissionId}, register {TrainingId}",
+                submissionId, trainingId);
+        }
+
+        Log.Warning("Training submission {SubmissionId} needs reconciliation. Register: {TrainingId}",
+            submissionId, trainingId);
+        return $"The register could not be confirmed. Ask support to check submission {submissionId} before retrying.";
     }
 
     private NewTrainingRegister MapToDTO(

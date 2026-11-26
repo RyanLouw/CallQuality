@@ -185,7 +185,7 @@ namespace CallQuality.Core.Manager.ExportManager
             
             var UserTrainings = ExcelExportHelper.ToDataTable(modle.UserTrainings);
             var ExistingRegisters = ExcelExportHelper.ToDataTable(modle.ExistingRegisters);
-            var SuggestedTrainings = ExcelExportHelper.ToDataTable(modle.SuggestedTrainings);
+            var RequiredTrainings = ExcelExportHelper.ToDataTable(modle.RequiredTrainings);
             var allDtos = new List<ExcelExportDTO>
             {
                 new ExcelExportDTO
@@ -200,8 +200,8 @@ namespace CallQuality.Core.Manager.ExportManager
                 },
                 new ExcelExportDTO
                 {
-                    AssessorsName = "SuggestedTrainings",
-                    AssessorChartData = SuggestedTrainings
+                    AssessorsName = "RequiredTrainings",
+                    AssessorChartData = RequiredTrainings
                 }
             };
 

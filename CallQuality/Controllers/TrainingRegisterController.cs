@@ -26,7 +26,9 @@ public class TrainingRegisterController : Controller
     public async Task<IActionResult> TrainingDetails([FromQuery] Guid? userId)
     {
         var model = await _trainingManager.GetTrainingDetailsAsync(userId);
-        return View(model);
+        return model is null
+            ? NotFound("No required training is available for this agent.")
+            : View(model);
     }
 
     [HttpGet("[action]")]
@@ -58,18 +60,22 @@ public class TrainingRegisterController : Controller
         return Json(traineeIds);
     }
 
-    [HttpPost("Save")] 
-    public async Task<IActionResult> Save(TrainingDetailsPageVM model) 
-    { 
-        var files = Request.Form.Files; 
-        var success = await _trainingManager.SaveTrainingRegisterAsync(model, files); 
-        if (!success) 
-        { 
-            TempData["Error"] = "An error occurred. Please try again."; 
-            return BadRequest(); 
-        } 
-        TempData["Success"] = "Training register added successfully!"; 
-        return RedirectToAction("Index"); 
-    }
+    [HttpPost("Save")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Save(TrainingDetailsPageVM model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
 
+        var error = await _trainingManager.SaveTrainingRegisterAsync(model, Request.Form.Files);
+        if (error is not null)
+        {
+            return BadRequest(error);
+        }
+
+        TempData["Success"] = "Training register added successfully!";
+        return RedirectToAction("Index");
+    }
 }

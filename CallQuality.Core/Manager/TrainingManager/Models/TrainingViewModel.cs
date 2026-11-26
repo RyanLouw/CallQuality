@@ -4,8 +4,6 @@ using DataAccessExistingRegisterItem =
     CallQuality.Core.DataAccess.TrainingRegisterDataAccess.Models.ExistingRegisterItem;
 using DataAccessOperatorAssignment =
     CallQuality.Core.DataAccess.Context.Entities.OperatorAssignment;
-using DataAccessTrainingRegister =
-    CallQuality.Core.DataAccess.Context.Entities.StoredProcedureResults.TrainingRegister;
 using DataAccessTrainingUserTraining =
     CallQuality.Core.DataAccess.TrainingRegisterDataAccess.Models.TrainingUserTraining;
 
@@ -19,7 +17,7 @@ public sealed class TrainingVM
 
     public List<ExistingRegisterItemVM> ExistingRegisters { get; set; } = new();
 
-    public List<TrainingRegisterSuggestedGroupedVM> SuggestedTrainings { get; set; } = new();
+    public List<RequiredTrainingGroupVM> RequiredTrainings { get; set; } = new();
 }
 
 public class TrainingUserTrainingVM
@@ -141,21 +139,8 @@ public class ExistingRegisterItemVM
     public Guid? SystemId { get; set; }
 }
 
-public class TrainingRegisterSuggestedGroupedVM
+public class RequiredTrainingGroupVM
 {
-    public TrainingRegisterSuggestedGroupedVM()
-    {
-    }
-
-    public TrainingRegisterSuggestedGroupedVM(DataAccessTrainingRegister entity)
-    {
-        ID_GUID = entity.ID_GUID;
-        AgentName = entity.AgentName ?? string.Empty;
-        Extension = entity.Extension ?? string.Empty;
-        Department = entity.Department ?? string.Empty;
-        AverageScore = entity.AverageScore;
-    }
-
     public Guid ID_GUID { get; set; }
 
     public string AgentName { get; set; } = string.Empty;
@@ -166,21 +151,13 @@ public class TrainingRegisterSuggestedGroupedVM
 
     public double AverageScore { get; set; }
 
+    public List<int> AssessmentIds { get; set; } = [];
+
     public List<MissedQuestion> MissedQuestions { get; set; } = new();
 }
 
 public class MissedQuestion
 {
-    public MissedQuestion()
-    {
-    }
-
-    public MissedQuestion(DataAccessTrainingRegister entity)
-    {
-        QuestionValue = entity.QuestionValue ?? string.Empty;
-        MissedCount = entity.MissedCount;
-    }
-
     public string QuestionValue { get; set; } = string.Empty;
 
     public int MissedCount { get; set; }

@@ -6,6 +6,7 @@ using CallQuality.Core.Manager.AssessmentsManager.Models;
 using CallQuality.Core.Manager.TrainingManager.Models;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Serilog;
 using System.Data;
 using System.Net.Http.Headers;
@@ -143,7 +144,7 @@ namespace CallQuality.DataAccess.DataAccess.TrainingRegisterDataAccess
             return members?.Select(m => m.MemberId).ToList() ?? new List<string>();
         }
 
-        public async Task<bool> SaveNewTrainingAsync(NewTrainingRegister trainingRegister, List<UserAddVM> trainees, List<string> fileNames, string uploadedBy, string uploadedByMail)
+        public async Task<(bool Success, long? TrainingId)> SaveNewTrainingAsync(NewTrainingRegister trainingRegister, List<UserAddVM> trainees, List<string> fileNames, string uploadedBy, string uploadedByMail)
         {
 
             var url = $"CallQuality/SaveNewTrainingRegister";
@@ -166,19 +167,27 @@ namespace CallQuality.DataAccess.DataAccess.TrainingRegisterDataAccess
 
             Log.Information("Sending Training Register to API: {Url}", url);
 
-            var response = await _httpClient.PostAsync(url, content);
-            var responseContent = await response.Content.ReadAsStringAsync();
+            using var response = await _httpClient.PostAsync(url, content);
+            if (!response.IsSuccessStatusCode)
+            {
+                Log.Warning("Training Register API returned {StatusCode}", response.StatusCode);
+                return (false, null);
+            }
 
+            var body = await response.Content.ReadAsStringAsync();
+            try
+            {
+                var token = JToken.Parse(body);
+                var idToken = token is JObject jsonObject
+                    ? jsonObject.GetValue("TrainingId", StringComparison.OrdinalIgnoreCase)
+                    : token;
 
-            Log.Information("BaseAddress: {Base}", _httpClient.BaseAddress);
-            Log.Information("Relative Url: {Url}", url);
-            Log.Information("Full Url (string concat): {Full}", $"{_httpClient.BaseAddress}{url}");
-
-
-            Log.Error("API ERROR BODY: {Body}", responseContent);
-
-            return response.IsSuccessStatusCode;
-
+                return (true, long.TryParse(idToken?.ToString(), out var id) && id > 0 ? id : null);
+            }
+            catch (JsonReaderException)
+            {
+                return (true, null);
+            }
         }
 
         public async Task<string> UploadTrainingFile(byte[] fileContent, string fileName, string authToken)

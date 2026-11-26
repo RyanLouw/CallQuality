@@ -37,6 +37,10 @@ public class NewTrainingRegisterVM
     [MinLength(1, ErrorMessage = "At least one trainee must be selected")]
     public List<string> SelectedTraineeIds { get; set; } = new();
 
+    public Guid? RequiredTrainingUserId { get; set; }
+
+    public List<int> RequiredAssessmentIds { get; set; } = [];
+
     public List<UserAddVM> Trainees { get; set; } = new();
 
     public string? LeaderId { get; set; }

@@ -39,7 +39,7 @@
             <button class="nav-link fw-semibold text-primary" id="suggested-tab"
                     data-bs-toggle="tab" data-bs-target="#suggested" type="button" role="tab"
                     aria-controls="suggested" aria-selected="false">
-                 Suggested Training
+                 Required Training
             </button>
         </li>
     </ul>
@@ -159,7 +159,7 @@
             </div>
         </div>
 
-        <!--  Suggested Training -->
+        <!--  Required Training -->
         <div class="tab-pane fade" id="suggested" role="tabpanel" aria-labelledby="suggested-tab">
             <div class="container-fluid mt-4">
 
@@ -183,10 +183,10 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @if (Model?.SuggestedTrainings != null && Model.SuggestedTrainings.Any())
+                            @if (Model?.RequiredTrainings != null && Model.RequiredTrainings.Any())
                             {
                                 int index = 0;
-                                foreach (var s in Model.SuggestedTrainings)
+                                foreach (var s in Model.RequiredTrainings)
                                 {
                                     var collapseId = $"collapseS{index}";
 
@@ -205,10 +205,10 @@
                                     <tr class="collapse bg-light suggested-detail" id="@collapseId">
                                         <td colspan="5">
                                             <div class="p-3">
-                                                <button class="btn btn-primary btn-sm mb-3"
-                                                        onclick='assignSuggestedTraining(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(s)))'>
-                                                      Add Training
-                                                </button>
+                                                <a class="btn btn-primary btn-sm mb-3"
+                                                   asp-action="TrainingDetails" asp-route-userId="@s.ID_GUID">
+                                                    Add Training
+                                                </a>
 
 
                                                 <table class="table table-sm table-striped mb-0">
@@ -250,7 +250,7 @@
                             {
                                 <tr>
                                     <td colspan="5" class="text-center text-muted py-4">
-                                        No suggested training data available.
+                                        No required training data available.
                                     </td>
                                 </tr>
                             }
@@ -419,11 +419,6 @@
             }
         });
 
-
-            function assignSuggestedTraining(model) {
-                const userId = model.ID_GUID;
-                window.location.href = `/TrainingRegister/TrainingDetails?userId=${userId}`;
-            }
 
             function goToTrainingDetails() {
                 window.location.href = "/TrainingRegister/TrainingDetails";

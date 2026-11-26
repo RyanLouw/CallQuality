@@ -40,6 +40,10 @@ public interface ICallQualityDataAccess
     Task<List<OperatorAssignment>> GetOperatorAssignmentsAsync(int? assessorId = null);
 
     Task<List<Operator_NumberOfAssessment_Report>> GetOperatorNumberOfAssessmentReportsAsync(DateTime month, Guid? assessorIdGuid = null);
+    Task<List<RequiredTrainingAssessment>> GetRequiredTrainingAssessmentsAsync(
+        DateTime from, DateTime to, string[]? operatorIds);
+    Task<bool> TryReserveAssessmentTrainingAsync(IReadOnlyCollection<AssessmentTrainingLink> links);
+    Task<int> CompleteAssessmentTrainingAsync(Guid submissionId, long trainingId);
     Task<List<TrainingRegister>> GetOperatorQuestionsMissedReportAsync(DateTime startDate, DateTime? endDate = null);
     Task<List<Questions>> GetQuestionWithTypesAsync();
     Task<List<QuestionWrongStat>> GetQuestionWrongStatsRangeAsync(DateTime startDate, DateTime endDate, string? typeName = null);
