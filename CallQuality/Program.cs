@@ -131,6 +131,14 @@ try
     /*
      * Application services and managers
      */
+    if (builder.Environment.IsDevelopment() &&
+        builder.Configuration.GetValue<bool>("RoleTest:Enabled"))
+    {
+        var roles = builder.Configuration.GetSection("RoleTest:Roles").Get<string[]>() ?? [];
+        builder.Services.AddSingleton(new DevelopmentRoleOverride(roles));
+        Log.Warning("Development role testing is enabled for all signed-in users with roles {Roles}", roles);
+    }
+
     builder.Services.AddScoped<IUserSession, UserSession>();
 
     builder.Services.AddScoped<IExportService, ExportManager>();
