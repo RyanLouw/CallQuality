@@ -1,0 +1,28 @@
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    color: #172033;
+}
+
+.container {
+    width: min(70rem, 100% - 2rem);
+    margin-inline: auto;
+}
+
+header {
+    border-bottom: 1px solid #d4dae3;
+}
+
+nav {
+    display: flex;
+    gap: 1.5rem;
+    padding-block: 1rem;
+}
+
+nav a {
+    color: #17488a;
+}
+
+main {
+    padding-block: 1.5rem;
+}
