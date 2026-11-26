@@ -12,6 +12,7 @@ public interface IReportManager
     Task<AssessorListeningTimeVM> GetAssessorListeningTimeAsync(DateTime start, DateTime end);
     Task<List<string>> GetAssessorsAsync(DateTime startDate, DateTime endDate);
     Task<List<AssessorTracking_Report>> GetAssessorTrackingReportAsync(DateTime start, DateTime end);
+    Task<ManagerDashDTO> GetReassessorHomeOverviewAsync(DateTime from, DateTime to);
     Task<ManagerDashDTO> GetManagerHomeOverviewAsync();
     Task<ViewAssessmentPageVM?> GetOperatorAssessmentAsync(int assessmentId);
     Task<List<OperatorNumberOfAssessmentReportDTO>> GetOperator_NumberOfAssessment_Reports(DateTime? start);

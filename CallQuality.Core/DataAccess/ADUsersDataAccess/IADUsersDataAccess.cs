@@ -11,6 +11,7 @@ public interface IADUsersDataAccess
 
     Task<bool> IsManagerAsync(Guid userId, CancellationToken ct = default);
     Task<bool> IsAssessorAsync(Guid userId, CancellationToken ct = default);
+    Task<bool> IsReassessorAsync(Guid userId, CancellationToken ct = default);
     Task<bool> IsItAsync(Guid userId, CancellationToken ct = default);
     Task<bool> IsAssessorOrManagerAsync(Guid userId, CancellationToken ct = default);
 

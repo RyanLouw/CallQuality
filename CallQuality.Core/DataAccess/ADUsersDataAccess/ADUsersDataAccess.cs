@@ -13,20 +13,27 @@ namespace CallQuality.Core.DataAccess.ADUsersDataAccess;
 public class ADUsersDataAccess : IADUsersDataAccess
 {
     private readonly ADUsersDbContext _context;
+    private readonly DevelopmentRoleOverride? _roleOverride;
 
     private readonly Guid _managerRole;
     private readonly Guid _assessorRole;
     private readonly Guid _itRole;
+    private readonly Guid? _reassessorRole;
 
     public ADUsersDataAccess(
         ADUsersDbContext context,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        DevelopmentRoleOverride? roleOverride = null)
     {
         _context = context;
+        _roleOverride = roleOverride;
 
         _managerRole = configuration.GetRequiredGuid("Roles:Manager");
         _assessorRole = configuration.GetRequiredGuid("Roles:Assessor");
         _itRole = configuration.GetRequiredGuid("Roles:IT");
+        _reassessorRole = string.IsNullOrWhiteSpace(configuration["Roles:Reassessor"])
+            ? null
+            : configuration.GetRequiredGuid("Roles:Reassessor");
     }
 
     public async Task<List<string>> GetUserRolesAsync(Guid? userId)
@@ -44,6 +51,9 @@ public class ADUsersDataAccess : IADUsersDataAccess
         if (await IsAssessorAsync(userId.Value))
             roles.Add("Assessor");
 
+        if (await IsReassessorAsync(userId.Value))
+            roles.Add("Reassessor");
+
         if (await IsItAsync(userId.Value))
             roles.Add("IT");
 
@@ -52,17 +62,34 @@ public class ADUsersDataAccess : IADUsersDataAccess
 
     public Task<bool> IsManagerAsync(Guid userId, CancellationToken ct = default)
     {
-        return IsUserInRoleAsync(userId, _managerRole, ct);
+        return HasRoleAsync(userId, "Manager", _managerRole, ct);
     }
 
     public Task<bool> IsAssessorAsync(Guid userId, CancellationToken ct = default)
     {
-        return IsUserInRoleAsync(userId, _assessorRole, ct);
+        return HasRoleAsync(userId, "Assessor", _assessorRole, ct);
+    }
+
+    public Task<bool> IsReassessorAsync(Guid userId, CancellationToken ct = default)
+    {
+        return HasRoleAsync(userId, "Reassessor", _reassessorRole, ct);
     }
 
     public Task<bool> IsItAsync(Guid userId, CancellationToken ct = default)
     {
-        return IsUserInRoleAsync(userId, _itRole, ct);
+        return HasRoleAsync(userId, "IT", _itRole, ct);
+    }
+
+    private Task<bool> HasRoleAsync(Guid userId, string role, Guid? roleId, CancellationToken ct)
+    {
+        if (_roleOverride is { } roleOverride)
+        {
+            return Task.FromResult(roleOverride.HasRole(role));
+        }
+
+        return roleId is Guid id
+            ? IsUserInRoleAsync(userId, id, ct)
+            : Task.FromResult(false);
     }
 
     public async Task<bool> IsAssessorOrManagerAsync(Guid userId, CancellationToken ct = default)

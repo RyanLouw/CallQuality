@@ -12,6 +12,10 @@ public sealed class ItRequirement : IAuthorizationRequirement { }
 
 public sealed class AssessorOrManagerRequirement : IAuthorizationRequirement { }
 
+public sealed class ReassessorRequirement : IAuthorizationRequirement { }
+
+public sealed class ManagerOrReassessorRequirement : IAuthorizationRequirement { }
+
 public static class ClaimsHelpers
 {
     public static Guid? GetUserId(ClaimsPrincipal user)
@@ -100,7 +104,7 @@ public sealed class AssessorHandler : AuthorizationHandler<AssessorRequirement>
         if (userId is not Guid id)
             return;
 
-        if (await _roles.IsAssessorAsync(id))
+        if (await _roles.IsAssessorAsync(id) || await _roles.IsReassessorAsync(id))
             context.Succeed(requirement);
     }
 }
@@ -146,7 +150,37 @@ public sealed class AssessorOrManagerHandler : AuthorizationHandler<AssessorOrMa
         if (userId is not Guid id)
             return;
 
-        if (await _roles.IsAssessorOrManagerAsync(id))
+        if (await _roles.IsAssessorOrManagerAsync(id) || await _roles.IsReassessorAsync(id))
             context.Succeed(requirement);
+    }
+}
+
+public sealed class ReassessorHandler(IADUsersDataAccess roles)
+    : AuthorizationHandler<ReassessorRequirement>
+{
+    protected override async Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        ReassessorRequirement requirement)
+    {
+        if (ClaimsHelpers.GetUserId(context.User) is Guid id &&
+            await roles.IsReassessorAsync(id))
+        {
+            context.Succeed(requirement);
+        }
+    }
+}
+
+public sealed class ManagerOrReassessorHandler(IADUsersDataAccess roles)
+    : AuthorizationHandler<ManagerOrReassessorRequirement>
+{
+    protected override async Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        ManagerOrReassessorRequirement requirement)
+    {
+        if (ClaimsHelpers.GetUserId(context.User) is Guid id &&
+            (await roles.IsManagerAsync(id) || await roles.IsReassessorAsync(id)))
+        {
+            context.Succeed(requirement);
+        }
     }
 }

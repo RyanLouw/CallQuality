@@ -116,6 +116,35 @@ namespace CallQuality.Core.Manager.ReportManager
 
 
 
+        public async Task<ManagerDashDTO> GetReassessorHomeOverviewAsync(DateTime from, DateTime to)
+        {
+            var counts = await _db.GetReassessmentCountsByOperatorAsync(from, to);
+            var assignments = await _db.GetOperatorAssignmentsAsync();
+            var users = await _db.GetAllUsersAsync();
+
+            var operatorIds = assignments
+                .Where(assignment => !string.IsNullOrWhiteSpace(assignment.OperatorId))
+                .Select(assignment => assignment.OperatorId!.Trim())
+                .Concat(counts.Keys)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var departments = users
+                .Where(user => !string.IsNullOrWhiteSpace(user.ID) && operatorIds.Contains(user.ID.Trim()))
+                .DistinctBy(user => user.ID!.Trim(), StringComparer.OrdinalIgnoreCase)
+                .GroupBy(user => string.IsNullOrWhiteSpace(user.Department) ? "Unknown" : user.Department.Trim(),
+                    StringComparer.OrdinalIgnoreCase)
+                .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new DepartmentViewModel(group.Key, group
+                    .Select(user => new AgentViewModel
+                    {
+                        DisplayName = user.DisplayName ?? user.ID!,
+                        AssessmentsDone = counts.GetValueOrDefault(user.ID!.Trim())
+                    })
+                    .OrderBy(agent => agent.DisplayName, StringComparer.OrdinalIgnoreCase)));
+
+            return new ManagerDashDTO(departments);
+        }
+
         public async Task<ManagerDashDTO> GetManagerHomeOverviewAsync()
         {
             var rawRows = await _db.GetManagerHomeOverviewAsync();

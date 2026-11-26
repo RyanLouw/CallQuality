@@ -74,6 +74,16 @@ try
                 new AssessorRequirement()));
 
         options.AddPolicy(
+            "Reassessor",
+            policy => policy.RequireAuthenticatedUser()
+                .Requirements.Add(new ReassessorRequirement()));
+
+        options.AddPolicy(
+            "ManagerOrReassessor",
+            policy => policy.RequireAuthenticatedUser()
+                .Requirements.Add(new ManagerOrReassessorRequirement()));
+
+        options.AddPolicy(
             "It",
             policy => policy.Requirements.Add(
                 new ItRequirement()));
@@ -87,6 +97,8 @@ try
     builder.Services.AddScoped<IAuthorizationHandler, ManagerHandler>();
     builder.Services.AddScoped<IAuthorizationHandler, AssessorHandler>();
     builder.Services.AddScoped<IAuthorizationHandler, ItHandler>();
+    builder.Services.AddScoped<IAuthorizationHandler, ReassessorHandler>();
+    builder.Services.AddScoped<IAuthorizationHandler, ManagerOrReassessorHandler>();
     builder.Services.AddScoped<
         IAuthorizationHandler,
         AssessorOrManagerHandler>();
@@ -119,6 +131,14 @@ try
     /*
      * Application services and managers
      */
+    if (builder.Environment.IsDevelopment() &&
+        builder.Configuration.GetValue<bool>("RoleTest:Enabled"))
+    {
+        var roles = builder.Configuration.GetSection("RoleTest:Roles").Get<string[]>() ?? [];
+        builder.Services.AddSingleton(new DevelopmentRoleOverride(roles));
+        Log.Warning("Development role testing is enabled for all signed-in users with roles {Roles}", roles);
+    }
+
     builder.Services.AddScoped<IUserSession, UserSession>();
 
     builder.Services.AddScoped<IExportService, ExportManager>();

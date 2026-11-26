@@ -1,0 +1,65 @@
+@model CallQuality.Core.Manager.ReportManager.Models.ManagerDashDTO
+
+@{
+    var countHeading = ViewData["CountHeading"] as string ?? "Times Assessed";
+    var highlightLowCounts = ViewData["HighlightLowCounts"] is not false;
+}
+
+<div class="container-fluid mt-5 manager-index-overview">
+    <div class="manager-index-department-grid">
+
+        @foreach (var department in Model.Departments)
+        {
+            <div class="manager-index-department-col">
+
+                <div class="manager-index-department-card shadow-sm p-3 h-100">
+
+                    <div class="text-center mb-3 manager-index-department-title">
+                        <div class="fw-bold fs-5 manager-index-department-name">
+                            @department.DepartmentName
+                        </div>
+                    </div>
+
+                    <div class="manager-index-department-header">
+                        <table class="table table-sm align-middle mb-0 text-center manager-index-department-header-table">
+                            <thead>
+                                <tr>
+                                    <th>Agent Name</th>
+                                    <th>@countHeading</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+
+                    <div class="manager-index-department-body-scroll">
+                        <table class="table table-sm table-hover align-middle mb-0 text-center manager-index-department-body-table">
+                            <tbody>
+
+                                @foreach (var agent in department.Agents)
+                                {
+                                    var isLow = highlightLowCounts && agent.AssessmentsDone < 6
+                                        ? "text-danger fw-semibold"
+                                        : "";
+
+                                    <tr>
+                                        <td class="text-truncate">
+                                            @agent.DisplayName
+                                        </td>
+
+                                        <td class="@isLow">
+                                            @agent.AssessmentsDone
+                                        </td>
+                                    </tr>
+                                }
+
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+            </div>
+        }
+
+    </div>
+</div>

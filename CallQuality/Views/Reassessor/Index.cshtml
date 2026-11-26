@@ -1,0 +1,30 @@
+@model CallQuality.Core.Manager.ReportManager.Models.ManagerDashDTO
+
+@{
+    ViewData["Title"] = "Reassessment Overview";
+    ViewData["CountHeading"] = "Times Reassessed";
+    ViewData["HighlightLowCounts"] = false;
+}
+
+<div class="position-relative d-flex justify-content-end align-items-center mb-4 manager-index-top-bar">
+    <h1 class="display-5 fw-bold mb-0 position-absolute top-50 start-50 translate-middle manager-index-title">
+        Reassessment Overview
+    </h1>
+
+    <a asp-controller="Reassessor"
+       asp-action="Export"
+       class="btn btn-success manager-index-export-button">
+        Export
+    </a>
+</div>
+
+<p class="text-center text-muted">Completed reassessments in the past month</p>
+
+@if (Model.Departments.Count == 0)
+{
+    <p class="text-center">No agents to display.</p>
+}
+else
+{
+    <partial name="_AgentOverview" model="Model" />
+}
