@@ -32,6 +32,7 @@ public interface ICallQualityDataAccess
     Task<List<string?>> GetAssessorsAsync(DateTime startDate, DateTime endDate);
     Task<List<AssessorTracking_Report>> GetAssessorTrackingReportAsync(DateTime start, DateTime end);
     Task<List<Feedback>> GetFeedbackForAssessmentAsync(int assessmentId);
+    Task<Dictionary<string, int>> GetReassessmentCountsByOperatorAsync(DateTime from, DateTime to);
     Task<List<ManagerHomeOverviewRow>> GetManagerHomeOverviewAsync();
     Task<List<UserAdd>> GetManagersAsync();
     Task<List<Assessment>> GetOperatorAssessmentsAsync(string ext, DateOnly start, DateOnly end);

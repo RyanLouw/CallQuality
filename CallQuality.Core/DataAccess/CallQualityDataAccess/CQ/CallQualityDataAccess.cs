@@ -35,6 +35,20 @@ public class CallQualityDataAccess: ICallQualityDataAccess
     }
 
 
+    public async Task<Dictionary<string, int>> GetReassessmentCountsByOperatorAsync(DateTime from, DateTime to)
+    {
+        var counts = await _context.Assessments
+            .Where(assessment => assessment.IsReassessed == true &&
+                assessment.ReassessedOn >= from && assessment.ReassessedOn < to &&
+                assessment.OperatorId != null && assessment.OperatorId != "")
+            .GroupBy(assessment => assessment.OperatorId!.Trim())
+            .Select(group => new { OperatorId = group.Key, Count = group.Count() })
+            .ToListAsync();
+
+        return counts.GroupBy(row => row.OperatorId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Sum(row => row.Count), StringComparer.OrdinalIgnoreCase);
+    }
+
     public async Task<List<string?>> GetAssessorsAsync(DateTime startDate, DateTime endDate)
     {
         return await _context.Assessments
