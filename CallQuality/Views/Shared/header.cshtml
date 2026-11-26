@@ -36,6 +36,7 @@
 
     var isManager = roles.Contains("Manager");
     var isAssessor = roles.Contains("Assessor");
+    var isReassessor = roles.Contains("Reassessor");
     var isIT = roles.Contains("IT");
 
 
@@ -43,7 +44,11 @@
 
     if (string.IsNullOrWhiteSpace(activeViewMode))
     {
-        if (isManager)
+        if (isReassessor)
+        {
+            activeViewMode = "Reassessor";
+        }
+        else if (isManager)
         {
             activeViewMode = "Manager";
         }
@@ -91,7 +96,16 @@
         <div class="nav-links d-flex gap-4">
 
          
-            @if (isManager && showManagerView)
+            @if (isReassessor && (!showManagerView || !isManager) && (!showAssessorView || !isAssessor))
+            {
+                <a class="nav-link" asp-controller="Reassessor" asp-action="Index">Reassessment Overview</a>
+                <a class="nav-link" asp-controller="Manager" asp-action="Assessments">New Overall Assessment</a>
+                <a class="nav-link" asp-controller="Assessor" asp-action="NewAssessment">New Assessment</a>
+                <a class="nav-link" asp-controller="Assessor" asp-action="OperatorAssessment">View Assessment</a>
+                <a class="nav-link" asp-controller="Assessor" asp-action="Report">Reports</a>
+                <a class="nav-link" asp-controller="TrainingRegister" asp-action="Index">Training Register</a>
+            }
+            else if (isManager && showManagerView)
             {
                 <a class="nav-link" asp-controller="Manager" asp-action="Index">Manager Overview</a>
                 <a class="nav-link" asp-controller="Manager" asp-action="Assessments">New Over Assessment</a>
@@ -137,7 +151,25 @@
                 <a class="nav-link" asp-controller="Home" asp-action="Index">Home</a>
             }
 
-            @if (isManager && isAssessor)
+            @if (isReassessor)
+            {
+                @if ((isManager && showManagerView) || (isAssessor && showAssessorView))
+                {
+                    <a class="nav-link text-warning" asp-controller="Nav" asp-action="Switch"
+                       asp-route-mode="Reassessor">Switch to Reassessor View</a>
+                }
+                @if (isManager && !showManagerView)
+                {
+                    <a class="nav-link text-warning" asp-controller="Nav" asp-action="Switch"
+                       asp-route-mode="Manager">Switch to Manager View</a>
+                }
+                @if (isAssessor && !showAssessorView)
+                {
+                    <a class="nav-link text-warning" asp-controller="Nav" asp-action="Switch"
+                       asp-route-mode="Assessor">Switch to Assessor View</a>
+                }
+            }
+            else if (isManager && isAssessor)
             {
                 var switchTo = showManagerView ? "Assessor" : "Manager";
 

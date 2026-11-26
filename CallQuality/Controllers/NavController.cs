@@ -30,6 +30,11 @@ public class NavController : Controller
         ViewBag.Roles = roles;
         ViewBag.UserName = User.Identity?.Name;
 
+        if (roles.Contains("Reassessor"))
+        {
+            return RedirectToAction("Index", "Reassessor");
+        }
+
         if (roles.Contains("Manager"))
         {
             return RedirectToAction("Index", "Manager");
@@ -59,6 +64,12 @@ public class NavController : Controller
         var canUseAssessorView = roles.Contains("Assessor");
 
         var selectedMode = mode?.Trim();
+
+        if (string.Equals(selectedMode, "Reassessor", StringComparison.OrdinalIgnoreCase) &&
+            roles.Contains("Reassessor"))
+        {
+            return RedirectToAction("Index", "Reassessor");
+        }
 
         if (string.Equals(selectedMode, "Assessor", StringComparison.OrdinalIgnoreCase) &&
             canUseAssessorView)

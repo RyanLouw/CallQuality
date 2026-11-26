@@ -74,6 +74,16 @@ try
                 new AssessorRequirement()));
 
         options.AddPolicy(
+            "Reassessor",
+            policy => policy.RequireAuthenticatedUser()
+                .Requirements.Add(new ReassessorRequirement()));
+
+        options.AddPolicy(
+            "ManagerOrReassessor",
+            policy => policy.RequireAuthenticatedUser()
+                .Requirements.Add(new ManagerOrReassessorRequirement()));
+
+        options.AddPolicy(
             "It",
             policy => policy.Requirements.Add(
                 new ItRequirement()));
@@ -87,6 +97,8 @@ try
     builder.Services.AddScoped<IAuthorizationHandler, ManagerHandler>();
     builder.Services.AddScoped<IAuthorizationHandler, AssessorHandler>();
     builder.Services.AddScoped<IAuthorizationHandler, ItHandler>();
+    builder.Services.AddScoped<IAuthorizationHandler, ReassessorHandler>();
+    builder.Services.AddScoped<IAuthorizationHandler, ManagerOrReassessorHandler>();
     builder.Services.AddScoped<
         IAuthorizationHandler,
         AssessorOrManagerHandler>();

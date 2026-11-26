@@ -1,0 +1,25 @@
+@model CallQuality.Core.Manager.AssessmentsManager.Models.PagedAssessmentVM
+
+@{
+    ViewData["Title"] = "Reassessment Overview";
+}
+
+<h1 class="mb-4">Reassessment Overview</h1>
+<p>Assessments from the past month</p>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <a class="card card-body h-100 text-decoration-none"
+           asp-controller="Manager" asp-action="Assessments" asp-route-activeTab="possible">
+            <h2 class="h5">Possible Reassessments</h2>
+            <span class="fs-3">@Model.TotalCountNotReassessment</span>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a class="card card-body h-100 text-decoration-none"
+           asp-controller="Manager" asp-action="Assessments" asp-route-activeTab="reassessed">
+            <h2 class="h5">Completed Reassessments</h2>
+            <span class="fs-3">@Model.TotalCountReassessment</span>
+        </a>
+    </div>
+</div>

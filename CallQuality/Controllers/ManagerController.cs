@@ -232,7 +232,7 @@ public class ManagerController : Controller
     }
 
 
-    [Authorize(Policy = "Manager")]
+    [Authorize(Policy = "ManagerOrReassessor")]
     [HttpGet(nameof(Assessments))]
     public async Task<IActionResult> Assessments(
      [FromQuery] int possiblePage = 1,
@@ -255,7 +255,7 @@ public class ManagerController : Controller
         return View(model);
     }
 
-    [Authorize(Policy = "Manager")]
+    [Authorize(Policy = "ManagerOrReassessor")]
     [HttpGet(nameof(Reassess))]
     [HttpGet(nameof(Reassess) + "/{id:int}")]
     public async Task<IActionResult> Reassess([FromRoute] int id)
@@ -264,7 +264,7 @@ public class ManagerController : Controller
         return View(vm);
     }
 
-    [Authorize(Policy = "Manager")]
+    [Authorize(Policy = "ManagerOrReassessor")]
     [HttpPost(nameof(SaveReassessment))]
     public async Task<IActionResult> SaveReassessment([FromBody] ReassessmentSaveRequest? request)
     {

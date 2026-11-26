@@ -17,6 +17,7 @@ public class ADUsersDataAccess : IADUsersDataAccess
     private readonly Guid _managerRole;
     private readonly Guid _assessorRole;
     private readonly Guid _itRole;
+    private readonly Guid? _reassessorRole;
 
     public ADUsersDataAccess(
         ADUsersDbContext context,
@@ -27,6 +28,9 @@ public class ADUsersDataAccess : IADUsersDataAccess
         _managerRole = configuration.GetRequiredGuid("Roles:Manager");
         _assessorRole = configuration.GetRequiredGuid("Roles:Assessor");
         _itRole = configuration.GetRequiredGuid("Roles:IT");
+        _reassessorRole = string.IsNullOrWhiteSpace(configuration["Roles:Reassessor"])
+            ? null
+            : configuration.GetRequiredGuid("Roles:Reassessor");
     }
 
     public async Task<List<string>> GetUserRolesAsync(Guid? userId)
@@ -44,6 +48,9 @@ public class ADUsersDataAccess : IADUsersDataAccess
         if (await IsAssessorAsync(userId.Value))
             roles.Add("Assessor");
 
+        if (await IsReassessorAsync(userId.Value))
+            roles.Add("Reassessor");
+
         if (await IsItAsync(userId.Value))
             roles.Add("IT");
 
@@ -58,6 +65,13 @@ public class ADUsersDataAccess : IADUsersDataAccess
     public Task<bool> IsAssessorAsync(Guid userId, CancellationToken ct = default)
     {
         return IsUserInRoleAsync(userId, _assessorRole, ct);
+    }
+
+    public Task<bool> IsReassessorAsync(Guid userId, CancellationToken ct = default)
+    {
+        return _reassessorRole is Guid roleId
+            ? IsUserInRoleAsync(userId, roleId, ct)
+            : Task.FromResult(false);
     }
 
     public Task<bool> IsItAsync(Guid userId, CancellationToken ct = default)
