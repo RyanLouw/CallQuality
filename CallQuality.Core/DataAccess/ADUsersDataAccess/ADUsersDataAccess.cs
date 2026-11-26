@@ -82,7 +82,7 @@ public class ADUsersDataAccess : IADUsersDataAccess
 
     private Task<bool> HasRoleAsync(Guid userId, string role, Guid? roleId, CancellationToken ct)
     {
-        if (_roleOverride is { } roleOverride && roleOverride.UserId == userId)
+        if (_roleOverride is { } roleOverride)
         {
             return Task.FromResult(roleOverride.HasRole(role));
         }

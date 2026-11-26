@@ -134,10 +134,9 @@ try
     if (builder.Environment.IsDevelopment() &&
         builder.Configuration.GetValue<bool>("RoleTest:Enabled"))
     {
-        var userId = builder.Configuration.GetValue<Guid>("RoleTest:UserId");
         var roles = builder.Configuration.GetSection("RoleTest:Roles").Get<string[]>() ?? [];
-        builder.Services.AddSingleton(new DevelopmentRoleOverride(userId, roles));
-        Log.Warning("Development role testing is enabled for {UserId} with roles {Roles}", userId, roles);
+        builder.Services.AddSingleton(new DevelopmentRoleOverride(roles));
+        Log.Warning("Development role testing is enabled for all signed-in users with roles {Roles}", roles);
     }
 
     builder.Services.AddScoped<IUserSession, UserSession>();

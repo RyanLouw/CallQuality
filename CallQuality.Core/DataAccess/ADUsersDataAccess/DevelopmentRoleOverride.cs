@@ -7,14 +7,8 @@ public sealed class DevelopmentRoleOverride
 
     private readonly HashSet<string> _roles;
 
-    public DevelopmentRoleOverride(Guid userId, IEnumerable<string> roles)
+    public DevelopmentRoleOverride(IEnumerable<string> roles)
     {
-        if (userId == Guid.Empty)
-        {
-            throw new InvalidOperationException("Set RoleTest:UserId to the test user's Entra object ID.");
-        }
-
-        UserId = userId;
         _roles = new HashSet<string>(roles, StringComparer.OrdinalIgnoreCase);
 
         if (!_roles.IsSubsetOf(SupportedRoles))
@@ -22,8 +16,6 @@ public sealed class DevelopmentRoleOverride
             throw new InvalidOperationException("RoleTest:Roles accepts Manager, Assessor, Reassessor and IT.");
         }
     }
-
-    public Guid UserId { get; }
 
     public bool HasRole(string role) => _roles.Contains(role);
 }
