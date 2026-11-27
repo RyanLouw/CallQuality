@@ -77,8 +77,8 @@ namespace CallQuality.Core.Manager.Models.CallQualityDTOs
 
     public partial class ReAssessmentDTO
     {
-      public List<AssessmentDTO> AlreadyReassessed { get; set;}
+      public List<AssessmentDTO> AlreadyReassessed { get; set; } = new();
 
-      public List<AssessmentDTO> NotReassessed { get; set;}
+      public List<AssessmentDTO> NotReassessed { get; set; } = new();
     }
 }
