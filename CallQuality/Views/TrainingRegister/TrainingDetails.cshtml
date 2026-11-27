@@ -168,9 +168,13 @@
 
     <script>
 
-         const getUsersByGroupUrl = '@Url.Action("GetUsersByGroup", "TrainingRegister", new { id = "__id__" })';
+        const getUsersByGroupUrl = '@Url.Action("GetUsersByGroup", "TrainingRegister", new { id = "__id__" })';
         const getUsersByLeaderUrl = '@Url.Action("GetUsersByLeader", "TrainingRegister", new { id = "__id__" })';
 
+        /**
+         * @param {"Group" | "Leader"} type
+         * @param {string} id
+         */
         function getUsersUrl(type, id) {
             const template = type === "Group"
                 ? getUsersByGroupUrl
@@ -181,31 +185,46 @@
 
 
         $(document).ready(function () {
-             $('#leaderSelect, #groupSelect').removeAttr('data-val data-val-required required');
+            $('#leaderSelect, #groupSelect').removeAttr('data-val data-val-required required');
 
-            $('#traineesTagBox').select2({
+            const element = document.getElementById('traineesTagBox');
+            if (!(element instanceof HTMLSelectElement)) {
+                return;
+            }
+
+            const traineeSelect = element;
+            const $trainees = $(traineeSelect);
+            const $select2 = /** @type {JQuery<HTMLSelectElement> & {
+                select2(options: { placeholder: string, width: string }): JQuery<HTMLSelectElement>
+            }} */ ($trainees);
+
+            $select2.select2({
                 placeholder: "Select trainees...",
                 width: '100%'
             });
+
+            function selectedTraineeIds() {
+                return Array.from(traineeSelect.selectedOptions, option => option.value);
+            }
 
             $('#trainingForm').on('submit', function (e) {
                 let isValid = true;
 
                 clearCustomValidation();
 
-                const topic = $('[name="NewTraining.TrainingTopic"]').val();
-                const description = $('[name="NewTraining.TrainingDescription"]').val();
+                const topic = String($('[name="NewTraining.TrainingTopic"]').val() ?? '').trim();
+                const description = String($('[name="NewTraining.TrainingDescription"]').val() ?? '').trim();
                 const timeDuration = $('[name="NewTraining.TimeDuration"]').val();
                 const dueDate = $('[name="NewTraining.DueDate"]').val();
                 const facilitator = $('[name="NewTraining.TrainingFacilitator.UserId"]').val();
-                const trainees = $('#traineesTagBox').val();
+                const trainees = selectedTraineeIds();
 
-                if (!topic || topic.trim() === '') {
+                if (!topic) {
                     showValidation('[name="NewTraining.TrainingTopic"]', 'Training Topic is required');
                     isValid = false;
                 }
 
-                if (!description || description.trim() === '') {
+                if (!description) {
                     showValidation('[name="NewTraining.TrainingDescription"]', 'Training Description is required');
                     isValid = false;
                 }
@@ -225,7 +244,7 @@
                     isValid = false;
                 }
 
-                if (!trainees || trainees.length === 0) {
+                if (trainees.length === 0) {
                     $('#traineesTagBox')
                         .next('.select2-container')
                         .find('.select2-selection')
@@ -246,10 +265,8 @@
                 return true;
             });
 
-            $('#traineesTagBox').on('change', function () {
-                const trainees = $(this).val();
-
-                if (trainees && trainees.length > 0) {
+            $trainees.on('change', function () {
+                if (selectedTraineeIds().length > 0) {
                     $('#traineesTagBox')
                         .next('.select2-container')
                         .find('.select2-selection')
@@ -262,7 +279,7 @@
             $('#groupSelect').on('change', function () {
                 const groupId = $(this).val();
 
-                if (groupId) {
+                if (typeof groupId === "string" && groupId) {
                     fetchUsersFor("Group", groupId);
                 }
             });
@@ -270,69 +287,54 @@
             $('#leaderSelect').on('change', function () {
                 const leaderId = $(this).val();
 
-                if (leaderId) {
+                if (typeof leaderId === "string" && leaderId) {
                     fetchUsersFor("Leader", leaderId);
                 }
             });
 
-        function fetchUsersFor(type, id) {
-
-            $.ajax({
-                url: getUsersUrl(type, id),
-                type: "GET",
-                success: function (result) {
-  
-
-                    const returnedGuids = result.map(x => {
-                        if (typeof x === "object") {
-                            return (x.id_Guid ?? x.ID_GUID ?? x.idGuid ?? x.userId ?? x.UserId ?? "").toString().toLowerCase();
+            /**
+             * @param {"Group" | "Leader"} type
+             * @param {string} id
+             */
+            function fetchUsersFor(type, id) {
+                $.ajax({
+                    url: getUsersUrl(type, id),
+                    type: "GET",
+                    success: function (/** @type {unknown} */ result) {
+                        if (!Array.isArray(result)) {
+                            return;
                         }
 
-                        return x.toString().toLowerCase();
-                    }).filter(x => x !== "");
+                        const returnedGuids = new Set(result.map((/** @type {unknown} */ item) => {
+                            if (item !== null && typeof item === "object") {
+                                const user = /** @type {Record<string, unknown>} */ (item);
+                                return String(user.id_Guid ?? user.ID_GUID ?? user.idGuid ??
+                                    user.userId ?? user.UserId ?? "").toLowerCase();
+                            }
 
+                            return String(item ?? "").toLowerCase();
+                        }).filter(guid => guid !== ""));
 
-
-                    const valuesToSelect = [];
-
-                    $('#traineesTagBox option').each(function () {
-                        const optionValue = this.value;
-                        const optionGuid = ($(this).data('guid') ?? '').toString().toLowerCase();
-
-                        if (returnedGuids.includes(optionGuid) || returnedGuids.includes(optionValue.toLowerCase())) {
-                            valuesToSelect.push(optionValue);
-                        }
-                    });
-
-
-                    const missingGuids = returnedGuids.filter(guid => {
-                        return !$('#traineesTagBox option').toArray().some(option => {
-                            const optionValue = option.value.toLowerCase();
-                            const optionGuid = ($(option).data('guid') ?? '').toString().toLowerCase();
-
-                            return optionGuid === guid || optionValue === guid;
+                        const selectedIds = new Set(selectedTraineeIds());
+                        traineeSelect.querySelectorAll('option').forEach(option => {
+                            const guid = (option.dataset.guid ?? '').toLowerCase();
+                            if (returnedGuids.has(guid) || returnedGuids.has(option.value.toLowerCase())) {
+                                selectedIds.add(option.value);
+                            }
                         });
-                    });
 
+                        $trainees.val([...selectedIds]).trigger('change');
+                    },
+                    error: function () {
+                        alert("Could not load users for this " + type);
+                    }
+                });
+            }
 
-                    const current = $('#traineesTagBox').val() || [];
-                    const merged = [...new Set([...current, ...valuesToSelect])];
-
-                    $('#traineesTagBox')
-                        .val(merged)
-                        .trigger('change');
-
-                },
-                error: function (xhr) {
-                 
-                    alert("Could not load users for this " + type);
-                }
-            });
-        }
-
-
-
-
+            /**
+             * @param {string} selector
+             * @param {string} message
+             */
             function showValidation(selector, message) {
                 const input = $(selector);
                 input.addClass('is-invalid');
